@@ -6,7 +6,7 @@
  * This code is based on the TinyUSB Host HID example from pico-SDK v1.?.?
  *
  * Modifications for PCEMouse
- * Copyright (c) 2021 David Shadoff
+ * Copyright (c) 2021, 2022 David Shadoff
  *
  * ------------------------------------
  *
@@ -51,6 +51,8 @@
 // Uncomment the following line if you desire button-swap when middle button is clicked:
 // #define MID_BUTTON_SWAPPABLE  true
 
+// Uncomment the following line if you desire adjustable sensitivity from scroll-wheel:
+#define SENSITIVITY_SCROLL  true
 
 
 
@@ -63,6 +65,24 @@ const bool buttons_swappable = false;
 #endif
 
 static bool buttons_swapped = false;
+
+
+// Sensitivity adjust (on scroll wheel) functionality
+// --------------------------------------------------
+#ifdef SENSITIVITY_SCROLL
+const bool sensitivity_adjustable = true;
+#else
+const bool sensitivity_adjustable = false;
+#endif
+
+int sensitivity_level = 1;
+
+const int sensitivity_multiplier[] = {2, 3, 5};
+const int sensitivity_divider = 3;
+
+int sens_remainder_x = 0;
+int sens_remainder_y = 0;
+
 
 // Core functionality
 // ------------------
@@ -254,6 +274,9 @@ static void process_mouse_report(hid_mouse_report_t const * report)
 
   static bool previous_middle_button = false;
 
+  int local_x_temp;
+  int local_y_temp;
+
   //------------- button state  -------------//
   uint8_t button_changed_mask = report->buttons ^ prev_report.buttons;
   if ( button_changed_mask & report->buttons)
@@ -287,8 +310,23 @@ static void process_mouse_report(hid_mouse_report_t const * report)
                 ((report->buttons & MOUSE_BUTTON_RIGHT)    ? 0x00 : 0x01));
   }
 
-  local_x = (0 - report->x);
-  local_y = (0 - report->y);
+  if (sensitivity_adjustable)
+  {
+     if ((report->wheel < 0) && (sensitivity_level > 0))
+        sensitivity_level--;
+     else if ((report->wheel > 0) && (sensitivity_level < 2))
+        sensitivity_level++;
+  }
+     
+  local_x_temp = ((0 - report->x) * sensitivity_multiplier[sensitivity_level]) + sens_remainder_x;
+  local_y_temp = ((0 - report->y) * sensitivity_multiplier[sensitivity_level]) + sens_remainder_y;
+
+  local_x = local_x_temp / sensitivity_divider;
+  local_y = local_y_temp / sensitivity_divider;
+
+  sens_remainder_x = local_x_temp % sensitivity_divider;
+  sens_remainder_y = local_y_temp % sensitivity_divider;
+
 
   // add to accumulator and post to the state machine
   // if a scan from the host machine is ongoing, wait
