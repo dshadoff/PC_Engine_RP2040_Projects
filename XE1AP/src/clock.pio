@@ -1,0 +1,71 @@
+;
+; By Dave Shadoff (c) 2022
+;
+;
+; Interfacing XE-1AP for a PC Engine
+;
+; Three state machines are in use:
+;
+;
+; 1) Clocked input, which monitors the CLR joypad line for
+;    low->high transitions, to start the output train of signals
+;
+; 2) Output generator, which places the current nybble plus
+;    signal control bits onto a set of GPIOs, based on the
+;    timebase sequence dervied from an actual joystick
+;
+; 3) Multiplexer, free-running:
+;    Based on SELECT signal from PC Engine, select which
+;    nybble is to be placed on the output pins back to the
+;    PC Engine, based on data placed on the (temporary)
+;    GPIOs by state machine #2
+;
+;
+; This file (clock.pio) implements State Machine #1
+; -------------------------------------------------
+;
+
+.program clock
+
+; Sample bits using an external clock (falling edge), and push groups of bits into the RX FIFO.
+; - IN pin 0 is the clock pin (and also the pin with data)
+; - Autopush is enabled, threshold 1
+;
+; This program samples data with each falling clock edge,
+;  with no wait for data to settle
+
+.wrap_target
+clklp:
+    wait 0 pin 0
+    wait 1 pin 0
+    irq 7
+    in pins, 1
+.wrap
+
+% c-sdk {
+static inline void clock_program_init(PIO pio, uint sm, uint offset, uint inpin) {
+    pio_sm_config c = clock_program_get_default_config(offset);
+
+    // Set the IN base pin to the provided `pin` parameter. This is the data
+    // pin, and the next-numbered GPIO is used as the clock pin.
+    sm_config_set_in_pins(&c, inpin);
+
+    // Set the pin directions to input at the PIO
+    pio_sm_set_consecutive_pindirs(pio, sm, inpin, 1, false);
+
+    // Connect these GPIOs to this PIO block
+    pio_gpio_init(pio, inpin);
+    gpio_pull_up(inpin);
+
+    sm_config_set_in_shift(
+        &c,
+        false, // Shift-to-right = false (i.e. shift to left)
+        true,  // Autopush enabled
+        1      // Autopush threshold = 1
+    );
+
+    // Load our configuration, and start the program from the beginning
+    pio_sm_init(pio, sm, offset, &c);
+    pio_sm_set_enabled(pio, sm, true);
+}
+%}

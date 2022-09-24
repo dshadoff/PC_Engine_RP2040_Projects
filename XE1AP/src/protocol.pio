@@ -1,0 +1,105 @@
+;
+; By Dave Shadoff (c) 2022
+;
+;
+; Interfacing XE-1AP for a PC Engine
+;
+; Three state machines are in use:
+;
+;
+; 1) Clocked input, which monitors the CLR joypad line for
+;    low->high transitions, to start the output train of signals
+;
+; 2) Output generator, which places the current nybble plus
+;    signal control bits onto a set of GPIOs, based on the
+;    timebase sequence dervied from an actual joystick
+;
+; 3) Multiplexer, free-running:
+;    Based on SELECT signal from PC Engine, select which
+;    nybble is to be placed on the output pins back to the
+;    PC Engine, based on data placed on the (temporary)
+;    GPIOs by state machine #2
+;    
+; 
+; This file (protocol.pio) implements State Machine #2
+; ----------------------------------------------------
+;
+
+.program protocol
+
+; Wait for IRQ from clock state machine, followed by sequencing of data out to GPIOs
+; - Autopush is enabled, threshold 1
+;
+; This program waits for IRQ7 - received from state machine 1 (clock),
+; and sends data to the output according to a time-based protocol.
+;
+; As data is sent, TRG1 identifies new half-byte by transitioning LOW/HIGH (and HIGH/LOW),
+; and TRG2 identifies Data Ready when LOW.
+;
+; TRG1/TRG2 are the "SET" pin group, while the data output is the "OUT" pin group.
+; Additionally, the "Run" and "Select" buttons are set by the main CPU (not PIO).
+;
+; This state machine needs to run at 1 MHz, as the time base is measured in cycles and
+; delays are implemented after most instructions in order to make up the correct timing
+; 
+
+.wrap_target
+entry:
+    set    pins, 2
+    wait 1 irq 7
+    nop             [31] ; wait 68 cycles until data ready
+    set    Y,5      [31] ; go through 6 cycles
+loop:
+    pull            [2]  ; one byte or 2 nybbles
+    out    pins, 4       ; first nybble
+    set    pins, 0  [12] ; data valid for 13 cycles
+    set    pins, 3  [2]  ; data invalid for 4 cycles
+    out    pins, 4       ; second nybble
+    set    pins, 1  [12] ; data valid for 13 cycles
+    set    pins, 3  [3]  ; data invalid for 4 cycles
+    set    pins, 2  [10] ; wait 16 cycles until next data ready
+    jmp    y--, loop
+.wrap
+
+% c-sdk {
+static inline void protocol_program_init(PIO pio, uint sm, uint offset, uint setpin, uint outpin) {
+    pio_sm_config c = protocol_program_get_default_config(offset);
+
+    float clkdiv = 125.0f;
+
+    // Connect these GPIOs to this PIO block
+    pio_gpio_init(pio, outpin);
+    pio_gpio_init(pio, outpin + 1);
+    pio_gpio_init(pio, outpin + 2);
+    pio_gpio_init(pio, outpin + 3);
+
+    pio_gpio_init(pio, setpin);
+    pio_gpio_init(pio, setpin + 1);
+
+    // Set the OUT base pin to the provided 'pin' parameter.
+    // These are where the data will be placed (temporarily)
+    sm_config_set_out_pins(&c, outpin, 4);
+
+    // Set the pin directions to input at the PIO
+    pio_sm_set_consecutive_pindirs(pio, sm, outpin, 4, true);
+
+    sm_config_set_set_pins(&c, setpin, 2);
+
+    // Set the pin directions to input at the PIO
+    pio_sm_set_consecutive_pindirs(pio, sm, setpin, 2, true);
+
+    sm_config_set_clkdiv( &c, clkdiv);
+    sm_config_set_fifo_join( &c, PIO_FIFO_JOIN_TX);
+
+    sm_config_set_out_shift(
+        &c,
+        true,  // Shift-to-right = true
+        false, // Autopull disabled
+        31     // Autopull threshold = 31
+    );
+
+    // Load our configuration, and start the program from the beginning
+    pio_sm_init(pio, sm, offset, &c);
+    pio_sm_set_enabled(pio, sm, true);
+}
+%}

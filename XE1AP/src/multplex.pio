@@ -1,0 +1,99 @@
+;
+; By Dave Shadoff (c) 2022
+;
+;
+; Interfacing XE-1AP for a PC Engine
+;
+; Three state machines are in use:
+; 
+;
+; 1) Clocked input, which monitors the CLR joypad line for
+;    low->high transitions, to start the output train of signals
+; 
+; 2) Output generator, which places the current nybble plus
+;    signal control bits onto a set of GPIOs, based on the
+;    timebase sequence dervied from an actual joystick
+;
+; 3) Multiplexer, free-running:
+;    Based on SELECT signal from PC Engine, select which
+;    nybble is to be placed on the output pins back to the
+;    PC Engine, based on data placed on the (temporary)
+;    GPIOs by state machine #2
+;
+;
+; This source file (multplex.pio) implements state machine #3
+; -----------------------------------------------------------
+;
+
+.program multplex
+
+.wrap_target
+loop:
+     in    PINS, 8
+     mov   OSR, ISR
+     out   NULL, 24
+
+     jmp   PIN, x_y     ; SEL pin from joypad input (jump if SEL = '1')
+     jmp   exitnul      ; Start/Sel/II/I are OK to output in this sequence
+
+x_y:                    ; However, D0-D3 need to be resequenced due to MD->PCE mapping
+     out   NULL, 4      ; it's clearerr and faster to do this in PIO code
+     in    OSR, 1       ; sequence is: D2 D1 D3 D0, so we shift them into ISR by
+                        ; getting them out of OSR (using x for temporary storage)
+     out   NULL, 1      ; Note that "in OSR,1" does NOT simultaneously shoft out of OSR while
+                        ; shifting into ISR; this shift must be done separately.
+                        ; First bit (D0) is straiightforward, but must be both shifted in AND out
+     mov   x, OSR       ; Hold in x temporarily
+     out   NULL, 2      ; Get rid of D1 and D2, to access D3 next
+     in    OSR, 1       ; now ISR is D3 D0 (+ 30 empty bits)
+     in    x, 2         ; now fetch D2 D1 from the temporary spot; ISR is now D2 D1 D3 D0 (+ empty)
+     mov   OSR, ISR     ; move it to the output place
+     out   NULL, 28     ; get rid of junk up front
+exitnul:
+     out   PINS, 4	; send the nybble to the OUT pins
+.wrap
+     
+
+% c-sdk {
+static inline void multplex_program_init(PIO pio, uint sm, uint offset, uint jmppin, uint temppin, uint outpin) {
+    pio_sm_config c = multplex_program_get_default_config(offset);
+
+    // Connect these GPIOs to this PIO block
+    pio_gpio_init(pio, jmppin);
+
+    pio_gpio_init(pio, outpin);
+    pio_gpio_init(pio, outpin + 1);
+    pio_gpio_init(pio, outpin + 2);
+    pio_gpio_init(pio, outpin + 3);
+
+    // Set the IN pins to the provided `temppin` parameter. This is where the data to be multiplexed is found
+    sm_config_set_in_pins(&c, temppin);
+
+    // Set the JMP pin to the provided `jmppin` parameter.
+    sm_config_set_jmp_pin (&c, jmppin);
+
+    // Set the OUT pin to the provided `outpin` parameter. This is where the data is sent out
+    sm_config_set_out_pins(&c, outpin, 4);
+
+    // Set the pin directions to output at the PIO
+    pio_sm_set_consecutive_pindirs(pio, sm, outpin, 4, true);
+
+    sm_config_set_in_shift(
+        &c,
+        true,  // Shift-to-right = true
+        false, // Autopull disabled
+        31     // Autopull threshold = 31
+    );
+
+    sm_config_set_out_shift(
+        &c,
+        true,  // Shift-to-right = true
+        false, // Autopull disabled
+        31     // Autopull threshold = 31
+    );
+
+    // Load our configuration, and start the program from the beginning
+    pio_sm_init(pio, sm, offset, &c);
+    pio_sm_set_enabled(pio, sm, true);
+}
+%}
