@@ -94,7 +94,7 @@ All values are low when pressed, high when not pressed
 
 #### Logic state diagram:
 
-![/../PCE_Controller_Info/images/XHE-3_protocol.png](/../PCE_Controller_Info/images/XHE-3_protocol.png)
+![/../PCE_Controller_Info/blob/main/images/XHE-3_protocol.png](/../PCE_Controller_Info/blob/main/images/XHE-3_protocol.png)
 
 
 
