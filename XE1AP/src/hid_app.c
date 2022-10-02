@@ -196,6 +196,15 @@ void process_sony_ds4(uint8_t const* report, uint16_t len)
   // previous report used to compare for changes
   static sony_ds4_report_t prev_report = { 0 };
 
+
+////////////
+static absolute_time_t last_called = 0;
+static absolute_time_t current_time = 0;
+static uint32_t worst_time = 0;
+static uint32_t first_time = 0;
+////////////
+
+
   uint8_t const report_id = report[0];
   report++;
   len--;
@@ -206,51 +215,66 @@ void process_sony_ds4(uint8_t const* report, uint16_t len)
     sony_ds4_report_t ds4_report;
     memcpy(&ds4_report, report, sizeof(ds4_report));
 
+current_time = get_absolute_time();
+if (first_time != 0) {
+  if (absolute_time_diff_us(last_called, current_time) > worst_time) {
+    printf("%d", absolute_time_diff_us(last_called, current_time));
+    if (absolute_time_diff_us(last_called, current_time) > worst_time) {
+      printf("*");
+      worst_time = absolute_time_diff_us(last_called, current_time);
+    }
+    printf("\n");
+  }
+}
+last_called = current_time;
+first_time = 1;
+
     // counter is +1, assign to make it easier to compare 2 report
     prev_report.counter = ds4_report.counter;
+
+// ----  start of customization block for XE1AP --------
+
+   // Note: Data is sent, 2 nybbles (1 wth TRG1 LOW, 1 with TRG1 HIGH) per cycle,
+   //       for 6 cycles of the data transmission. These are sent as bytes, with 
+   //       Nybble 2 as most significant, and nybble 1 as least-signifcant
+   //
+   // The nybbles are in the following sequence:
+   //  1) Buttons A, B, C, D (note: A is "pressed" is either A or A' is pressed; same with B/B')
+   //  2) Buttons E1, E2, Start, Select
+   //  3) most-significant 4 bits of 'Y' axis
+   //  4) most-significant 4 bits of 'X' axis
+   //  5) most-significant 4 bits of 'throttle' axis
+   //  6) 0000
+   //  7) least-significant 4 bits of 'Y' axis
+   //  8) least-significant 4 bits of 'X' axis
+   //  9) least-significant 4 bits of 'throttle' axis
+   // 10) 0000
+   // 11) Buttons A, B, A', B' (These are only able to be differentiated by this nybble)
+   // 12) 1111
+   //
+
+    statusword0 = (ds4_report.square ? 0 : 0x80) |
+                  (ds4_report.triangle ? 0 : 0x40) | 
+                  (ds4_report.option ? 0 : 0x20) |
+                  (ds4_report.share ? 0 : 0x10) | 
+                  ((ds4_report.circle || ds4_report.r1) ? 0 : 0x08) |
+                  ((ds4_report.cross || ds4_report.r2) ? 0 : 0x04) |
+                  (ds4_report.l1 ? 0 : 0x02) |
+                  (ds4_report.l2 ? 0 : 0x01);
+    statusword1 = (ds4_report.x & 0xF0) | ((ds4_report.y & 0xF0) >> 4);
+    statusword2 = ((255 - ds4_report.rz) & 0xF0) >> 4;
+    statusword3 = ((ds4_report.x & 0x0F) << 4) | (ds4_report.y & 0x0F);
+    statusword4 = ((255 - ds4_report.rz) & 0x0F);
+    statusword5 = 0xF0 | (ds4_report.circle ? 0 : 0x08) | (ds4_report.cross ? 0 : 0x04) |
+                  (ds4_report.r1 ? 0: 0x02) | (ds4_report.r2 ? 0: 0x01);
+
+// ----   end  of new code customization block for XE1AP --------
 
     // only print if changes since it is polled ~ 5ms
     // Since count+1 after each report and  x, y, z, rz fluctuate within 1 or 2
     // We need more than memcmp to check if report is different enough
     if ( diff_report(&prev_report, &ds4_report) )
     {
-// ----  start of customization block for XE1AP --------
-
-     // Note: Data is sent, 2 nybbles (1 wth TRG1 LOW, 1 with TRG1 HIGH) per cycle,
-     //       for 6 cycles of the data transmission. These are sent as bytes, with 
-     //       Nybble 2 as most significant, and nybble 1 as least-signifcant
-     //
-     // The nybbles are in the following sequence:
-     //  1) Buttons A, B, C, D (note: A is "pressed" is either A or A' is pressed; same with B/B')
-     //  2) Buttons E1, E2, Start, Select
-     //  3) most-significant 4 bits of 'Y' axis
-     //  4) most-significant 4 bits of 'X' axis
-     //  5) most-significant 4 bits of 'throttle' axis
-     //  6) 0000
-     //  7) least-significant 4 bits of 'Y' axis
-     //  8) least-significant 4 bits of 'X' axis
-     //  9) least-significant 4 bits of 'throttle' axis
-     // 10) 0000
-     // 11) Buttons A, B, A', B' (These are only able to be differentiated by this nybble)
-     // 12) 1111
-     //
-
-      statusword0 = (ds4_report.square ? 0 : 0x80) |
-                    (ds4_report.triangle ? 0 : 0x40) | 
-                    (ds4_report.option ? 0 : 0x20) |
-                    (ds4_report.share ? 0 : 0x10) | 
-                    ((ds4_report.circle || ds4_report.r1) ? 0 : 0x08) |
-                    ((ds4_report.cross || ds4_report.r2) ? 0 : 0x04) |
-                    (ds4_report.l1 ? 0 : 0x02) |
-                    (ds4_report.l2 ? 0 : 0x01);
-      statusword1 = (ds4_report.x & 0xF0) | ((ds4_report.y & 0xF0) >> 4);
-      statusword2 = ((255 - ds4_report.rz) & 0xF0) >> 4;
-      statusword3 = ((ds4_report.x & 0x0F) << 4) | (ds4_report.y & 0x0F);
-      statusword4 = ((255 - ds4_report.rz) & 0x0F);
-      statusword5 = 0xF0 | (ds4_report.circle ? 0 : 0x08) | (ds4_report.cross ? 0 : 0x04) |
-                    (ds4_report.r1 ? 0: 0x02) | (ds4_report.r2 ? 0: 0x01);
-
-// ----   end  of new code customization block for XE1AP --------
 // ----  start of commented-out code customization block for XE1AP --------
 
 //      printf("(x, y, z, rz) = (%u, %u, %u, %u)\r\n", ds4_report.x, ds4_report.y, ds4_report.z, ds4_report.rz);
