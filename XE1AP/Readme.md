@@ -9,11 +9,21 @@ analog positioning may not be as smooth as it could be.
 
 ## PC Board and Assembly
 
-Please see the PC Board used in the "PCEMouse" project in this repository (KB2040 board version).
-This uses the same board (just different firmware).
+This project has several different possible "carrier" boards, depending on which host machine you are targeting.
+All are deigned in EAGLE; all include schematic, board layout, and gerber files.  They also include BOM and assembly files
+for JLCPCB SMD assembly.
 
-I also intend to try to make a board which could work with the Megadrive at some point.
+### PC Engine
 
+This is the same PC Board used in the "PCEMouse" project in this repository (KB2040 board version), however I have copied
+the contents here for simplicity for users.
+
+### Japanese PCs (MSX, X68000, PC-98, etc.)
+
+This is a slightly differnet carrier board with a DB-9 connector, for Japanese MSX, X68000, and PC-98 machines.  It uses the SAME
+KB2040 and the SAME firmware as the PC Engine version.
+
+Next, I intend to make a board to work with the Megadrive.
 
 ## Source Code
 
