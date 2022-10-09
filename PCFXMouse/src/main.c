@@ -60,9 +60,11 @@
 #define LATCHIN_PIN     CLKIN_PIN + 1   // Note - in pins must be a consecutive 'in' group
 #define DATAOUT_PIN     29              // Note - out pins must be a consecutive 'out' group
 
-#elif SEEED_XIAO_RP2040         // else assignments for Seed XIAO RP2040 board
+#endif
 
-#define CLKIN_PIN       24
+#ifdef SEEED_XIAO_RP2040         // else assignments for Seed XIAO RP2040 board
+
+#define CLKIN_PIN       6
 #define LATCHIN_PIN     CLKIN_PIN + 1   // Note - in pins must be a consecutive 'in' group
 #define DATAOUT_PIN     26              // Note - out pins must be a consecutive 'out' group
  
@@ -367,6 +369,6 @@ void led_blinking_task(void)
   if ( board_millis() - start_ms < interval_ms) return; // not enough time
   start_ms += interval_ms;
 
-  board_led_write(led_state);
+//  board_led_write(led_state);
   led_state = 1 - led_state; // toggle
 }
