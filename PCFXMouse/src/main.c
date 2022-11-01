@@ -54,7 +54,7 @@
 //--------------------------------------------------------------------+
 
 
-#ifdef ADAFRUIT_QTPY_RP2040     // if build for QtPy RP2040 board
+#ifdef ADAFRUIT_QTPY_RP2040      // if build for QtPy RP2040 board
 
 #define CLKIN_PIN       24
 #define LATCHIN_PIN     CLKIN_PIN + 1   // Note - in pins must be a consecutive 'in' group
@@ -62,19 +62,34 @@
 
 #endif
 
-#ifdef SEEED_XIAO_RP2040         // else assignments for Seed XIAO RP2040 board
+#ifdef SEEED_XIAO_RP2040         // if Seeed XIAO RP2040 board
 
 #define CLKIN_PIN       6
 #define LATCHIN_PIN     CLKIN_PIN + 1   // Note - in pins must be a consecutive 'in' group
 #define DATAOUT_PIN     26              // Note - out pins must be a consecutive 'out' group
  
-#else                           // else assume build for RP Pico board
+#endif
+
+#ifdef ADAFRUIT_KB2040           // if KB2040 board
+
+#define CLKIN_PIN       28
+#define LATCHIN_PIN     CLKIN_PIN + 1   // Note - in pins must be a consecutive 'in' group
+#define DATAOUT_PIN     2               // Note - out pins must be a consecutive 'out' group
+
+#endif
+
+#ifndef ADAFRUIT_QTPY_RP2040
+#ifndef SEEED_XIAO_RP2040
+#ifndef ADAFRUIT_KB2040                           // else assume build for RP Pico board
 
 #define CLKIN_PIN       16
 #define LATCHIN_PIN     CLKIN_PIN + 1   // Note - in pins must be a consecutive 'in' group
 #define DATAOUT_PIN     18              // Note - out pins must be a consecutive 'out' group
 
 #endif
+#endif
+#endif
+
 
 void led_blinking_task(void);
 

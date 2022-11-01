@@ -1,5 +1,5 @@
 [Eagle]
-Version="09 03 00"
+Version="09 06 02"
 Platform="Mac OS X"
 Globals="Globals"
 Desktop="Desktop"
@@ -282,6 +282,7 @@ UsedLibraryUrn="urn:adsk.eagle:library:196"
 UsedLibraryUrn="urn:adsk.eagle:library:197"
 UsedLibraryUrn="urn:adsk.eagle:library:198"
 UsedLibraryUrn="urn:adsk.eagle:library:199"
+UsedLibrary="/Users/davidshadoff/Documents/EAGLE/libraries/PC-Engine.lbr"
 UsedLibrary="/Users/davidshadoff/Documents/EAGLE/libraries/Wuerth_Elektronik_eiCan_Communication_Connectors_v2.2.lbr"
 
 [Win_1]
