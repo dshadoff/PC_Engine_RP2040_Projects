@@ -30,7 +30,7 @@ but try to have them remain nearly flush with the PC board.\
 4. Ensure that the empty row of pins (which we will use for the right-angle pin headers) is not so close to the PC-FX; we would not want
 them to be shorted by the slightly-visible metal faceplate when inserted.
 5. Solder the pins in place
-6. Use the wire to carefully extract the connectr assembly.\
+6. Use the wire to carefully extract the connector assembly.\
 ![Top View](../img/FXPins_in_connector.jpg)
 7. For the right-angle pin header, use angle clippers to remove some of the height of the pins so that they don't emerge through the
 other side of the board when inserted.  The board should be 1.6mm thick; roughly 1.2mm-1.5mm of pin should be sufficient.
@@ -43,7 +43,8 @@ coating to ensure that they don't get shorted out by any metal hear the connecto
 
 1. Position the KB2040 board on the bootom side of the carrier board (where other parts are *NOT* mounted), such that the holes are aligned
 (you may wish to use a pin header or two to anchor it in place). The USB-C connector should be at the same end as the USB-A connector
-on the other side. Solder the boards together at the castellation.
+on the other side. Solder the boards together at the castellation.\
+![Top View](../img/fxmouse_back.jpg)
 2. Insert the headers from the connector board through the holes on the RP2040 board.  Be careful to ensure that the pins are nserted into
 the side with the KB2040 board.
 This connection should be tight enough that the pins can hold the board in place.
