@@ -26,7 +26,7 @@ games, or even on the startup screen.  It was a mouse with a rotating ball and a
 mouse would be familiar with the desire to use a modern cordless optical mouse).
 
 The RP2040 board is used as the USB Host for the mouse, and PIOs are used for signalling to the PC-FX console.
-<img src="https://github.com/dshadoff/PC_Engine_RP2040_Projects/blob/main/img/fxmouse.jpg" width="378" height="504">
+<img src="https://github.com/dshadoff/PC_Engine_RP2040_Projects/blob/main/img/fxmouse_front.jpg" width="378" height="504">
 
 ## Others
 
@@ -34,9 +34,12 @@ Other Projects are coming... the PIOs on the RPi Pico are very interesting and f
 retrocomputing/retrogaming projects.
 
 ## Notes
-I have tried to use the Adafruit QtPy RP2040 as much as possible, as it is a compact form factor which is easy to design around.
+I initially used the Adafruit QtPy RP2040 as much as possible, as it is a compact form factor which is easy to design around; however,
+I have also warmed up to the Seeed XIAO for having the same form factor, but with no parts on the underside (making soldering on the
+castellations easier), and lower price.  The Adafruit KB2040 is also very attractive because it breaks out the USB pins so that alternate
+USB connectors can be used (such as USB-A connectors for mouse devices).
 
-Unfortunately, the Adafruit site tries to direct all users toward CircuitPython rather than C/C++ (the Pi SDK), and
+Unfortunately, for the QtPy 2040, the Adafruit site tries to direct all users toward CircuitPython rather than C/C++ (the Pi SDK), and
 as a result, Pinout pages of the "Pinout" page for their RP2040 devices don't include references to the GPIO numbers.
 
 Therefore, I am including a graphic here:
