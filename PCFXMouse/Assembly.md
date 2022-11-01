@@ -26,12 +26,12 @@ the way through the board.  This is how I do it:
 soldering is complete, but this wire should not be soldered to any part of the connector.
 3. Position the connector board on top of the pins so that the silkscreen printing is facing up. Allow the pins to penetrate the holes slightly
 but try to have them remain nearly flush with the PC board.
-![Top View](../images/FXConnector_backside.jpg)
+![Top View](../img/FXConnector_backside.jpg)
 4. Ensure that the empty row of pins (which we will use for the right-angle pin headers) is not so close to the PC-FX; we would not want
 them to be shorted by the slightly-visible metal faceplate when inserted.
 5. Solder the pins in place
 6. Use the wire to carefully extract the connectr assembly.
-![Top View](../images/FXPins_in_connector.jpg)
+![Top View](../img/FXPins_in_connector.jpg)
 7. For the right-angle pin header, use angle clippers to remove some of the height of the pins so that they don't emerge through the
 other side of the board when inserted.  The board should be 1.6mm thick; roughly 1.2mm-1.5mm of pin should be sufficient.
 8. Solder the pin headers into place, with the long end facing inward; these will hold the main board in place.
