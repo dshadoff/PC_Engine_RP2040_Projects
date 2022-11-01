@@ -26,7 +26,7 @@ games, or even on the startup screen.  It was a mouse with a rotating ball and a
 mouse would be familiar with the desire to use a modern cordless optical mouse).
 
 The RP2040 board is used as the USB Host for the mouse, and PIOs are used for signalling to the PC-FX console.
-<img src="https://github.com/dshadoff/PC_Engine_RP2040_Projects/blob/main/img/fxmouse_front.jpg" width="378" height="504">
+![Front View](img/fxmouse_front.jpg)
 
 ## Others
 
