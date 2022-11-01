@@ -32,17 +32,8 @@ position the PC board over top, and solder in place.
 
 Steps to assembly:
 
-(To be improved)
-
-1. If using pin headers, trim the leads carefully, to minimize the solder "bump" on the underside of the board when mounted.
-2. Solder carefully, minimizing the amount of "bump" below the board
-3. Mount the RP2040 board with the USB connector facing away from the 6 holes which will be used to connect to the host connector board.
-4. Connect it to a host computer while holding the "Boot" button down.  This will put it in DFU mode and create a virtual drive
-on the host computer.  Drag and drop the *.uf2 firmware file into that folder.  A moment later, the virtual drive should disappear
-and after about 1 second, all four LEDs should light up briefly as part of the boot sequence of the memory device.  Disconnect it from USB.
-5. This board connects to the first PC Board with a 90-degree male pin header; the short end is
-connected to the adapter board, and the long end should be cut flush with the console connector
-and soldered in place.  Be careful to connect the 5V pin properly.
+See the Assembly Guide
+**[See the Assembly Guide](Assembly.md)**
 
 
 ## Source Code
