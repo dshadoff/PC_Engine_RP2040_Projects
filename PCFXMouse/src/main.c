@@ -48,27 +48,17 @@
 #include "hardware/pio.h"
 #include "pcfxplex.pio.h"
 #include "clock.pio.h"
+#include "ws2812.pio.h"
 
 //--------------------------------------------------------------------+
 // MACRO CONSTANT TYPEDEF PROTYPES
 //--------------------------------------------------------------------+
 
 
-#ifdef ADAFRUIT_QTPY_RP2040      // if build for QtPy RP2040 board
+// leave this uncommented if you want adjustable sensitivity form the scroll-wheel:
+//
+#define SENSITIVITY_SCROLL  true
 
-#define CLKIN_PIN       24
-#define LATCHIN_PIN     CLKIN_PIN + 1   // Note - in pins must be a consecutive 'in' group
-#define DATAOUT_PIN     29              // Note - out pins must be a consecutive 'out' group
-
-#endif
-
-#ifdef SEEED_XIAO_RP2040         // if Seeed XIAO RP2040 board
-
-#define CLKIN_PIN       6
-#define LATCHIN_PIN     CLKIN_PIN + 1   // Note - in pins must be a consecutive 'in' group
-#define DATAOUT_PIN     26              // Note - out pins must be a consecutive 'out' group
- 
-#endif
 
 #ifdef ADAFRUIT_KB2040           // if KB2040 board
 
@@ -76,18 +66,20 @@
 #define LATCHIN_PIN     CLKIN_PIN + 1   // Note - in pins must be a consecutive 'in' group
 #define DATAOUT_PIN     2               // Note - out pins must be a consecutive 'out' group
 
+// Neopixel stuff
+#define IS_RGBW         true
+#define NUM_PIXELS      1
+
+#define WS2812_PIN PICO_DEFAULT_WS2812_PIN
+
 #endif
 
-#ifndef ADAFRUIT_QTPY_RP2040
-#ifndef SEEED_XIAO_RP2040
 #ifndef ADAFRUIT_KB2040                           // else assume build for RP Pico board
 
 #define CLKIN_PIN       16
 #define LATCHIN_PIN     CLKIN_PIN + 1   // Note - in pins must be a consecutive 'in' group
 #define DATAOUT_PIN     18              // Note - out pins must be a consecutive 'out' group
 
-#endif
-#endif
 #endif
 
 
@@ -136,9 +128,24 @@ uint8_t  output_buttons = 0xFF;
 static absolute_time_t init_time;
 static absolute_time_t current_time;
 static const absolute_time_t reset_period = 7000;  // at 7000us (7ms), reset the scan exclude flag
+absolute_time_t last_sens_time;
 
-PIO pio;
-uint sm1, sm2;   // sm1 = plex; sm2 = clock
+PIO pio, pioled;
+uint sm1, sm2, smled;   // sm1 = plex; sm2 = clock
+
+//
+//// WS2812 "Neopixel" protocol transport
+//
+void __not_in_flash_func(put_pixel)(uint32_t pixel_grb) {
+    pio_sm_put_blocking(pioled, smled, pixel_grb << 8u);
+}
+
+uint32_t __not_in_flash_func(urgb_u32)(uint8_t r, uint8_t g, uint8_t b) {
+    return
+            ((uint32_t) (r) << 8) |
+            ((uint32_t) (g) << 16) |
+            (uint32_t) (b);
+}
 
 /*------------- MAIN -------------*/
 
@@ -146,12 +153,31 @@ uint sm1, sm2;   // sm1 = plex; sm2 = clock
 // and "pinned" in SRAM - not paged in/out from XIP flash
 //
 
+void __not_in_flash_func(set_sens_led)(int level)
+{
+  switch(level) {
+    case 0:
+      put_pixel(urgb_u32(0, 7, 0));  // green
+      break;
+    case 1:
+      put_pixel(urgb_u32(12, 12, 0));  // yellow
+      break;
+    case 2:
+      put_pixel(urgb_u32(28, 2, 0));  // red
+      break;
+    default:
+      put_pixel(urgb_u32(10, 10, 10));  // white
+  }
+}
+
 //
 // post_globals - accumulate the many intermediate mouse scans (~1ms)
 //                into an accumulator which will be reported back to PCFX
 //
-void __not_in_flash_func(post_globals)(uint8_t buttons, uint8_t delta_x, uint8_t delta_y)
+void __not_in_flash_func(post_globals)(uint8_t buttons, uint8_t delta_x, uint8_t delta_y, int sensitivity_level)
 {
+static int prev_sens_level = 1;
+
   if (delta_x >= 128) 
     global_x = global_x - (256-delta_x);
   else
@@ -171,6 +197,16 @@ void __not_in_flash_func(post_globals)(uint8_t buttons, uint8_t delta_x, uint8_t
      output_buttons = global_buttons;
 
      output_word = 0x2f000000 | ((output_buttons & 0xff) << 16) | (((~output_x>>1) & 0xff) << 8) | ((~output_y>>1) & 0xff);
+  }
+
+  // only update sensitivity LED if it has changed, and >10ms since the last update
+  //
+  if ((sensitivity_level != prev_sens_level) &&
+      (absolute_time_diff_us(last_sens_time, get_absolute_time()) > 10000))
+  {
+     set_sens_led(sensitivity_level);
+     prev_sens_level = sensitivity_level;
+     last_sens_time = get_absolute_time();
   }
 }
 
@@ -200,9 +236,9 @@ static void __not_in_flash_func(process_signals)(void)
   {
     // tinyusb host task
     tuh_task();
-#ifndef ADAFRUIT_QTPY_RP2040
-    led_blinking_task();
-#endif
+//#ifndef ADAFRUIT_QTPY_RP2040
+//    led_blinking_task();
+//#endif
 
 #if CFG_TUH_CDC
     cdc_task();
@@ -278,6 +314,33 @@ static bool rx_bit = 0;
   }
 }
 
+void ws2812_countdown()
+{
+int start = 20;
+int count;
+
+    for (count = start; count >= 0; count--) {
+      put_pixel(urgb_u32(count, 0, 0));  // red
+      sleep_ms(10);
+    }
+    sleep_ms(100);
+
+    for (count = start; count >= 0; count--) {
+      put_pixel(urgb_u32(0, count, 0));  // green
+      sleep_ms(10);
+    }
+    sleep_ms(100);
+
+    for (count = start; count >= 0; count--) {
+      put_pixel(urgb_u32(0, 0, count));  // blue
+      sleep_ms(10);
+    }
+    sleep_ms(100);
+
+    put_pixel(urgb_u32(0, 0, 0));  // blue
+    sleep_ms(1000);
+}
+
 int main(void)
 {
   board_init();
@@ -303,6 +366,17 @@ int main(void)
   // Both state machines can run on the same PIO processor
   pio = pio0;
 
+////////////////////////
+// Setup NeoPixel LED
+//
+  pioled = pio1;
+  smled = 0;
+
+  uint offset = pio_add_program(pioled, &ws2812_program);
+
+  ws2812_program_init(pioled, smled, offset, WS2812_PIN, 800000, IS_RGBW);
+
+
   // Load the plex (multiplex output) program, and configure a free state machine
   // to run the program.
 
@@ -319,6 +393,11 @@ int main(void)
   clock_program_init(pio, sm2, offset2, LATCHIN_PIN);
 
   multicore_launch_core1(core1_entry);
+
+  sleep_ms(1000);
+  ws2812_countdown();  // show "initialization flourish"
+  set_sens_led(1);     // standard sensitivity
+  last_sens_time = get_absolute_time();  // shouldn't update LED sooner than 10ms
 
   process_signals();
 

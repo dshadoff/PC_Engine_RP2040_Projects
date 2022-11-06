@@ -6,7 +6,7 @@
  * This code is based on the TinyUSB Host HID example from pico-SDK v1.?.?
  *
  * Modifications for PCFXMouse
- * Copyright (c) 2021 David Shadoff
+ * Copyright (c) 2021, 2022 David Shadoff
  *
  * ------------------------------------
  *
@@ -48,6 +48,30 @@
 
 #define MAX_REPORT  4
 
+// leave this uncommented if you want adjustable sensitivity form the scroll-wheel:
+//
+#define SENSITIVITY_SCROLL  true
+
+// Sensitivity adjust (on scroll wheel) functionality
+// --------------------------------------------------
+#ifdef SENSITIVITY_SCROLL
+const bool sensitivity_adjustable = true;
+#else
+const bool sensitivity_adjustable = false;
+#endif
+
+
+int sensitivity_level = 1;
+
+const int sensitivity_multiplier[] = {2, 3, 5};
+const int sensitivity_divider = 3;
+
+int sens_remainder_x = 0;
+int sens_remainder_y = 0;
+
+
+// Core functionality
+// ------------------
 static uint8_t const keycode2ascii[128][2] =  { HID_KEYCODE_TO_ASCII };
 
 uint8_t buttons;
@@ -65,7 +89,7 @@ static void process_kbd_report(hid_keyboard_report_t const *report);
 static void process_mouse_report(hid_mouse_report_t const * report);
 static void process_generic_report(uint8_t dev_addr, uint8_t instance, uint8_t const* report, uint16_t len);
 
-extern void __not_in_flash_func(post_globals)(uint8_t buttons, uint8_t delta_x, uint8_t delta_y);
+extern void __not_in_flash_func(post_globals)(uint8_t buttons, uint8_t delta_x, uint8_t delta_y, int sensitivity_level);
 
 void hid_app_task(void)
 {
@@ -234,6 +258,9 @@ static void process_mouse_report(hid_mouse_report_t const * report)
 {
   static hid_mouse_report_t prev_report = { 0 };
 
+  int local_x_temp;
+  int local_y_temp;
+
   //------------- button state  -------------//
   uint8_t button_changed_mask = report->buttons ^ prev_report.buttons;
   if ( button_changed_mask & report->buttons)
@@ -246,16 +273,31 @@ static void process_mouse_report(hid_mouse_report_t const * report)
        report->buttons & MOUSE_BUTTON_RIGHT     ? '1' : '-');
   }
 
-    buttons = ( (0xFC) |
-               ((report->buttons & MOUSE_BUTTON_RIGHT)   ? 0x00 : 0x02) |
-               ((report->buttons & MOUSE_BUTTON_LEFT)    ? 0x00 : 0x01));
+  buttons = ( (0xFC) |
+             ((report->buttons & MOUSE_BUTTON_RIGHT)   ? 0x00 : 0x02) |
+             ((report->buttons & MOUSE_BUTTON_LEFT)    ? 0x00 : 0x01));
 
-    local_x = report->x;
-    local_y = report->y;
+  if (sensitivity_adjustable)
+  {
+     if ((report->wheel < 0) && (sensitivity_level > 0))
+        sensitivity_level--;
+     else if ((report->wheel > 0) && (sensitivity_level < 2))
+        sensitivity_level++;
+  }
 
-    // add to accumulator and post to the state machine
-    // if a scan from the host machine is ongoing, wait
-    post_globals(buttons, local_x, local_y);
+  local_x_temp = (report->x * sensitivity_multiplier[sensitivity_level]) + sens_remainder_x;
+  local_y_temp = (report->y * sensitivity_multiplier[sensitivity_level]) + sens_remainder_y;
+
+  local_x = local_x_temp / sensitivity_divider;
+  local_y = local_y_temp / sensitivity_divider;
+
+  sens_remainder_x = local_x_temp % sensitivity_divider;
+  sens_remainder_y = local_y_temp % sensitivity_divider;
+
+
+  // add to accumulator and post to the state machine
+  // if a scan from the host machine is ongoing, wait
+  post_globals(buttons, local_x, local_y, sensitivity_level);
 
   //------------- cursor movement -------------//
   cursor_movement(report->x, report->y, report->wheel);

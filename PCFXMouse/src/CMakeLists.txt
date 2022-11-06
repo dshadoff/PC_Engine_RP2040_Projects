@@ -20,6 +20,7 @@ pico_add_extra_outputs(pcfxmouse)
 
 pico_generate_pio_header(pcfxmouse ${CMAKE_CURRENT_LIST_DIR}/pcfxplex.pio )
 pico_generate_pio_header(pcfxmouse ${CMAKE_CURRENT_LIST_DIR}/clock.pio )
+pico_generate_pio_header(pcfxmouse ${CMAKE_CURRENT_LIST_DIR}/ws2812.pio )
 
 
 # Example source
