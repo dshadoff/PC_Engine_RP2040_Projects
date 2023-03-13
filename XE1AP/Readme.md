@@ -29,7 +29,7 @@ Next, I intend to make a board to work with the Megadrive.
 
 ### Compilation
 
-This was updated to use Pico-SDK version 1.4.0 .
+This was updated to use Pico-SDK version 1.5.0 .
 
 pico_sdk_import.cmake is from the SDK, but is required by CMake (and thus replicated here)
 

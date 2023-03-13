@@ -40,7 +40,7 @@ See the Assembly Guide
 
 ### Compilation
 
-This was built using Pico-SDK version 1.4.0 .
+This code is now updated to Pico-SDK version 1.5.0, and should be built using that version of the SDK.
 pico_sdk_import.cmake is from the SDK, but is required by CMake (and thus replicated here).
 
 This is based on the TinyUSB Host HID example, and since this often changes (required by refactoring of

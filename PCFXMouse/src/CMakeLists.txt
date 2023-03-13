@@ -27,7 +27,6 @@ pico_generate_pio_header(pcfxmouse ${CMAKE_CURRENT_LIST_DIR}/ws2812.pio )
 target_sources(pcfxmouse PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/hid_app.c
         ${CMAKE_CURRENT_SOURCE_DIR}/main.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/msc_app.c
         )
 
 # Example include
